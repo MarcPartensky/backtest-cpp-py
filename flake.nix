@@ -1,0 +1,58 @@
+{
+  description = "Event-driven backtesting engine";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+  }:
+    flake-utils.lib.eachDefaultSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+
+      python = pkgs.python312;
+
+      pythonEnv = python.withPackages (ps:
+        with ps; [
+          numpy
+          pandas
+          matplotlib
+          yfinance
+          # dev
+          ruff
+        ]);
+    in {
+      devShells.default = pkgs.mkShell {
+        packages = [
+          pythonEnv
+          pkgs.uv
+          pkgs.just
+          pkgs.ruff
+        ];
+
+        shellHook = ''
+          echo "backtest dev shell — python $(python --version)"
+        '';
+      };
+
+      packages.default = pkgs.stdenv.mkDerivation {
+        pname = "backtest";
+        version = "0.1.0";
+        src = ./.;
+        buildInputs = [pythonEnv];
+        installPhase = ''
+          mkdir -p $out/bin $out/lib
+          cp backtest.py $out/lib/backtest.py
+          cat > $out/bin/backtest << EOF
+          #!/bin/sh
+          exec ${pythonEnv}/bin/python $out/lib/backtest.py "\$@"
+          EOF
+          chmod +x $out/bin/backtest
+        '';
+      };
+    });
+}
