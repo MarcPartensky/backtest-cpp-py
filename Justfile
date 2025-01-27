@@ -1,8 +1,8 @@
-default:
-    just --list
-
 run:
     uv run python backtest.py
+
+help:
+    just --list
 
 install:
     uv sync
