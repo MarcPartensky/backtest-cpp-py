@@ -1,5 +1,5 @@
 run:
-    uv run python backtest.py
+    uv run streamlit run backtest.py
 
 help:
     just --list
