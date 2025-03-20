@@ -1,10 +1,11 @@
 """
 Event-Driven Backtesting Engine
 ================================
-Single Streamlit entry point.
-Sidebar lets you choose between:
-  - Python engine  (strategies package, runs inline)
-  - C++ core       (compiled binary, reads results/*.csv)
+Single Streamlit entry point — controls everything:
+  - Data download (yfinance -> CSV)
+  - C++ build (cmake)
+  - Engine selection (Python / C++)
+  - Backtest execution + visualization
 """
 
 from __future__ import annotations
@@ -46,10 +47,9 @@ div.stButton > button {
     font-weight: 600; width: 100%;
 }
 div.stButton > button:hover { background: #3A82D0; }
+div.stButton > button:disabled { background: #2a2a3a; color: #555; }
 </style>
 """, unsafe_allow_html=True)
-
-# ── Constants ─────────────────────────────────────────────────────────────────
 
 BG    = "#0E1117"
 PANEL = "#161B22"
@@ -60,8 +60,8 @@ GRID  = "#21262D"
 GREEN = "#2ECC71"
 
 CORE_BINARY = "./build/backtest"
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
+DATA_DIR    = "data"
+RESULTS_DIR = "results"
 
 def _base_layout(**kw) -> dict:
     return dict(
@@ -76,11 +76,17 @@ def _base_layout(**kw) -> dict:
 def fmt_pct(v: float) -> str: return f"{v:.2%}"
 def fmt_f(v: float)   -> str: return f"{v:.2f}"
 
-def load_benchmark(ticker: str, start: str, end: str, ref_value: float) -> pd.Series | None:
+def data_exists(symbols: list[str]) -> bool:
+    return all(os.path.isfile(f"{DATA_DIR}/{s}.csv") for s in symbols)
+
+def binary_exists() -> bool:
+    return os.path.isfile(CORE_BINARY)
+
+def load_benchmark(ticker: str, start: str, end: str, ref: float) -> pd.Series | None:
     try:
         raw = yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False)
-        bench = raw["Close"].squeeze()
-        return (bench / bench.iloc[0] * ref_value)
+        b   = raw["Close"].squeeze()
+        return b / b.iloc[0] * ref
     except Exception:
         return None
 
@@ -98,8 +104,6 @@ def compute_performance(equity: pd.Series, initial_capital: float) -> dict:
     return dict(total_return=total_ret, cagr=cagr, sharpe=sharpe,
                 max_dd=max_dd, volatility=vol, calmar=calmar,
                 drawdown=drawdown, returns=returns)
-
-# ── Plots (shared by both engines) ───────────────────────────────────────────
 
 def plot_equity(equity: pd.Series, bench: pd.Series | None, trades: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
@@ -148,15 +152,14 @@ def plot_returns_dist(returns: pd.Series) -> go.Figure:
 
 def render_results(equity: pd.Series, perf: dict, trades: pd.DataFrame,
                    bench_ticker: str, initial_capital: float):
-    start_str = equity.index[0].strftime("%Y-%m-%d")
-    end_str   = equity.index[-1].strftime("%Y-%m-%d")
-    bench = load_benchmark(bench_ticker, start_str, end_str, equity.iloc[0])
-
-    # KPIs
-    st.markdown("### Performance Summary")
+    bench      = load_benchmark(bench_ticker,
+                                equity.index[0].strftime("%Y-%m-%d"),
+                                equity.index[-1].strftime("%Y-%m-%d"),
+                                equity.iloc[0])
     bench_perf = compute_performance(bench.reindex(equity.index, method="ffill"), equity.iloc[0]) \
                  if bench is not None else None
 
+    st.markdown("### Performance Summary")
     cols = st.columns(6)
     kpis = [
         ("Total Return", fmt_pct(perf["total_return"]),
@@ -176,22 +179,18 @@ def render_results(equity: pd.Series, perf: dict, trades: pd.DataFrame,
         col.metric(label, val, delta)
 
     st.markdown("---")
-
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Equity Curve", "📉 Drawdown", "📊 Returns", "📋 Trades"])
 
     with tab1:
         st.plotly_chart(plot_equity(equity, bench, trades), width='stretch')
-
     with tab2:
         c1, c2 = st.columns([3, 2])
         with c1:
             st.plotly_chart(plot_drawdown(perf["drawdown"]), width='stretch')
         with c2:
             st.plotly_chart(plot_rolling_sharpe(perf["returns"]), width='stretch')
-
     with tab3:
         st.plotly_chart(plot_returns_dist(perf["returns"]), width='stretch')
-
     with tab4:
         if not trades.empty:
             df = trades.copy()
@@ -209,14 +208,9 @@ def render_results(equity: pd.Series, perf: dict, trades: pd.DataFrame,
 
 with st.sidebar:
     st.markdown("## 📈 Backtester")
-    st.markdown("---")
-
-    engine = st.radio("Engine", ["Python  (strategies)", "C++  (core)"],
-                      help="Python runs inline. C++ requires a compiled binary.")
-    use_cpp = engine.startswith("C++")
 
     st.markdown("---")
-    st.markdown("#### Data")
+    st.markdown("#### 1. Data")
     raw_symbols = st.text_input("Symbols", value="AAPL, MSFT")
     symbols     = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
     col1, col2  = st.columns(2)
@@ -225,66 +219,95 @@ with st.sidebar:
     with col2:
         end   = st.date_input("End",   value=pd.Timestamp("2024-01-01"))
 
-    st.markdown("#### Strategy - SMA Crossover")
+    if data_exists(symbols):
+        st.success(f"Data ready: {', '.join(symbols)}")
+    else:
+        missing = [s for s in symbols if not os.path.isfile(f"{DATA_DIR}/{s}.csv")]
+        st.warning(f"Missing: {', '.join(missing)}")
+    download_btn = st.button("⬇ Download data")
+
+    st.markdown("---")
+    st.markdown("#### 2. Engine")
+    engine  = st.radio("Engine", ["Python  (strategies)", "C++  (core)"], label_visibility="collapsed")
+    use_cpp = engine.startswith("C++")
+
+    if use_cpp:
+        if binary_exists():
+            st.success("Binary ready: `./build/backtest`")
+        else:
+            st.warning("Binary not built yet.")
+        build_btn = st.button("🔨 Build C++ core")
+    else:
+        build_btn = False
+
+    st.markdown("---")
+    st.markdown("#### 3. Strategy")
     fast_window = st.slider("Fast window", 5,  100, 20, step=5)
     slow_window = st.slider("Slow window", 20, 300, 50, step=10)
     if fast_window >= slow_window:
-        st.warning("Fast window must be < slow window.")
-
-    st.markdown("#### Portfolio")
+        st.warning("Fast must be < slow.")
     initial_capital = st.number_input("Capital ($)", min_value=10_000,
                                       max_value=10_000_000, value=100_000, step=10_000)
     benchmark = st.text_input("Benchmark", value="SPY").strip().upper()
 
-    if use_cpp:
-        st.markdown("#### C++ binary")
-        binary_path = st.text_input("Binary path", value=CORE_BINARY)
-        data_dir    = st.text_input("Data dir",    value="data")
-        results_dir = st.text_input("Results dir", value="results")
-        binary_ok   = os.path.isfile(binary_path)
-        if not binary_ok:
-            st.error(f"Binary not found: `{binary_path}`")
-            st.code("cmake -B build -DCMAKE_BUILD_TYPE=Release\ncmake --build build -j4",
-                    language="bash")
-
     st.markdown("---")
-    run_btn = st.button(
-        "▶ Run backtest",
-        disabled=(fast_window >= slow_window) or (use_cpp and not binary_ok)
+    can_run = (
+        data_exists(symbols)
+        and fast_window < slow_window
+        and (not use_cpp or binary_exists())
     )
-
-    # architecture note
-    if use_cpp:
-        st.markdown("""
-        <div style='margin-top:1rem;font-size:0.72rem;color:#555;line-height:1.7'>
-        <b style='color:#8B949E'>core/ (C++17)</b><br>
-        std::variant + std::visit<br>
-        fills at next bar open<br>
-        exports results/*.csv
-        </div>""", unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div style='margin-top:1rem;font-size:0.72rem;color:#555;line-height:1.7'>
-        <b style='color:#8B949E'>strategies/ (Python)</b><br>
-        queue.Queue dispatch<br>
-        yfinance data feed<br>
-        runs inline
-        </div>""", unsafe_allow_html=True)
+    run_btn = st.button("▶ Run backtest", disabled=not can_run)
 
 # ── Main area ─────────────────────────────────────────────────────────────────
 
-engine_label = "C++ core" if use_cpp else "Python strategies"
 st.markdown("# 📈 Event-Driven Backtesting Engine")
 st.markdown(
-    f"**Engine:** {engine_label} - "
+    f"**Engine:** {'C++ core' if use_cpp else 'Python strategies'} - "
     f"**SMA** ({fast_window}/{slow_window}) - "
     f"**Symbols:** {', '.join(symbols)} - "
     f"**Capital:** ${initial_capital:,.0f}"
 )
 st.markdown("---")
 
+# ── Download ──────────────────────────────────────────────────────────────────
+
+if download_btn:
+    cmd = ["python", "scripts/download_data.py"] + symbols + [
+           "--start", str(start), "--end", str(end), "--outdir", DATA_DIR]
+    with st.status("Downloading data...", expanded=True) as status:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        st.code(proc.stdout + proc.stderr, language="bash")
+        status.update(
+            label="Download complete." if proc.returncode == 0 else "Download failed.",
+            state="complete" if proc.returncode == 0 else "error")
+    st.stop()
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+
+if build_btn:
+    with st.status("Building C++ core...", expanded=True) as status:
+        cfg = subprocess.run(["cmake", "-B", "build", "-DCMAKE_BUILD_TYPE=Release"],
+                             capture_output=True, text=True)
+        bld = subprocess.run(["cmake", "--build", "build", "-j4"],
+                             capture_output=True, text=True)
+        st.code(cfg.stdout + cfg.stderr + bld.stdout + bld.stderr, language="bash")
+        ok = cfg.returncode == 0 and bld.returncode == 0
+        status.update(label="Build complete." if ok else "Build failed.",
+                      state="complete" if ok else "error")
+    st.stop()
+
+# ── Idle ──────────────────────────────────────────────────────────────────────
+
 if not run_btn:
-    st.info("Configure parameters in the sidebar, then click **▶ Run backtest**.")
+    steps = []
+    if not data_exists(symbols):
+        steps.append("- Click **⬇ Download data**")
+    if use_cpp and not binary_exists():
+        steps.append("- Click **🔨 Build C++ core**")
+    if fast_window >= slow_window:
+        steps.append("- Fix fast/slow windows")
+    st.info("Ready - click **▶ Run backtest**." if not steps
+            else "Before running:\n" + "\n".join(steps))
     st.stop()
 
 # ── Python engine ─────────────────────────────────────────────────────────────
@@ -293,49 +316,37 @@ if not use_cpp:
     try:
         from strategies import run_backtest
         equity, perf, trade_log = run_backtest(
-            symbols, str(start), str(end), initial_capital, fast_window, slow_window
-        )
+            symbols, str(start), str(end), initial_capital, fast_window, slow_window)
         trades = pd.DataFrame(trade_log) if trade_log else pd.DataFrame()
     except Exception as e:
         st.error(f"Python engine error: {e}")
         st.stop()
-
     render_results(equity, perf, trades, benchmark, initial_capital)
 
 # ── C++ engine ────────────────────────────────────────────────────────────────
 
 else:
-    sym_arg = ",".join(symbols)
-    cmd = [binary_path, data_dir, sym_arg,
+    cmd = [CORE_BINARY, DATA_DIR, ",".join(symbols),
            str(fast_window), str(slow_window), str(int(initial_capital))]
 
-    st.code(" ".join(cmd), language="bash")
-
-    try:
+    with st.status("Running C++ core...", expanded=False) as status:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    except subprocess.TimeoutExpired:
-        st.error("C++ engine timed out after 120s.")
-        st.stop()
-    except FileNotFoundError:
-        st.error(f"Binary not found: `{binary_path}`")
-        st.stop()
+        status.update(
+            label="C++ core finished." if proc.returncode == 0 else "C++ core failed.",
+            state="complete" if proc.returncode == 0 else "error")
+        if proc.returncode != 0:
+            st.code(proc.stderr, language="bash")
+            st.stop()
 
-    if proc.returncode != 0:
-        st.error("C++ engine failed.")
-        st.code(proc.stderr, language="bash")
-        st.stop()
-
-    # show C++ stdout (perf table)
     with st.expander("C++ engine output", expanded=False):
         st.code(proc.stdout, language="bash")
 
-    # load results
-    equity_path = os.path.join(results_dir, "equity.csv")
-    trades_path = os.path.join(results_dir, "trades.csv")
-    perf_path   = os.path.join(results_dir, "performance.csv")
+    equity_path = os.path.join(RESULTS_DIR, "equity.csv")
+    trades_path = os.path.join(RESULTS_DIR, "trades.csv")
+    perf_path   = os.path.join(RESULTS_DIR, "performance.csv")
 
     if not os.path.exists(equity_path):
-        st.error(f"No equity.csv found in `{results_dir}/`.")
+        st.error(f"No equity.csv in `{RESULTS_DIR}/`.")
         st.stop()
 
     equity  = pd.read_csv(equity_path, index_col="date", parse_dates=True)["equity"]
@@ -361,5 +372,4 @@ else:
         drawdown     = drawdown,
         returns      = returns,
     )
-
     render_results(equity, perf, trades, benchmark, initial_capital)
