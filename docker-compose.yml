@@ -1,5 +1,6 @@
 services:
   backtest:
+    image: marcpartensky/backtest
     build: .
     ports:
       - "8501:8501"
