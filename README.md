@@ -1,6 +1,6 @@
 # Event-Driven Backtesting Engine
 
-Moteur de backtesting event-driven implémenté en deux langages avec une interface Streamlit unifiée.
+Event-driven backtesting engine implemented in two languages with a unified Streamlit interface.
 
 ```
 DataHandler  →  MarketEvent
@@ -15,20 +15,20 @@ Broker       →  FillEvent  →  Portfolio::update()
 
 ```
 backtest/
-├── core/                   ← moteur C++17 (performance-critical)
+├── core/                   ← C++17 engine (performance-critical)
 │   ├── include/
 │   │   ├── events.hpp      # std::variant<MarketEvent, SignalEvent, OrderEvent, FillEvent>
-│   │   ├── bar.hpp         # struct OHLCV
+│   │   ├── bar.hpp         # OHLCV struct
 │   │   ├── data_handler.hpp
-│   │   ├── strategy.hpp    # base Strategy + SMACrossStrategy
+│   │   ├── strategy.hpp    # Strategy base + SMACrossStrategy
 │   │   ├── portfolio.hpp
-│   │   ├── broker.hpp      # fill au open, commission 0.1%
+│   │   ├── broker.hpp      # fill at open, 0.1% flat commission
 │   │   ├── performance.hpp # Sharpe, CAGR, Max DD, Calmar
-│   │   └── export.hpp      # export CSV
+│   │   └── export.hpp      # CSV export
 │   └── src/
 │       └── main.cpp
 │
-├── strategies/             ← moteur Python (reference implementation)
+├── strategies/             ← Python engine (reference implementation)
 │   ├── events.py
 │   ├── data_handler.py
 │   ├── strategy.py
@@ -37,7 +37,7 @@ backtest/
 │   ├── performance.py
 │   └── runner.py
 │
-├── app.py                  ← Streamlit, point d'entrée unique
+├── app.py                  ← Streamlit, single entry point
 ├── scripts/
 │   └── download_data.py
 ├── CMakeLists.txt
@@ -47,40 +47,30 @@ backtest/
 
 ## Quickstart
 
-### 1. Télécharger les données
+### 1. Download data
 ```bash
 just download AAPL,MSFT
-# ou: python scripts/download_data.py AAPL MSFT --start 2015-01-01 --end 2024-01-01
+# or: python scripts/download_data.py AAPL MSFT --start 2015-01-01 --end 2024-01-01
 ```
 
-### 2. Compiler le core C++
+### 2. Build C++ core
 ```bash
 just build
-# ou: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4
+# or: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4
 ```
 
-### 3. Lancer l'interface
+### 3. Launch the UI
 ```bash
 just app
-# ou: streamlit run app.py
+# or: streamlit run app.py
 ```
 
-Choisir le moteur dans la sidebar : **Python strategies** (inline) ou **C++ core** (subprocess + CSV).
+Select the engine in the sidebar: **Python strategies** (runs inline) or **C++ core** (subprocess + CSV).
 
-### Workflow complet en une commande
+### Full workflow in one command
 ```bash
 just all AAPL,MSFT
 ```
-
-## Engines
-
-| | Python `strategies/` | C++ `core/` |
-|---|---|---|
-| Dispatch | `queue.Queue` + `if/elif` | `std::queue` + `std::visit` |
-| Events | dataclasses | `std::variant` |
-| Data | yfinance live | CSV pre-downloaded |
-| Output | inline Streamlit | `results/*.csv` |
-| Usage | prototypage rapide | backtest longue période |
 
 ## Docker
 
@@ -88,8 +78,18 @@ just all AAPL,MSFT
 docker compose up --build
 ```
 
-Ouvre `http://localhost:8501`. Les dossiers `data/` et `results/` sont montés en volume local — les données et résultats persistent entre les redémarrages.
+Open `http://localhost:8501`. The `data/` and `results/` directories are mounted as local volumes — data and results persist across container restarts.
 
-## Métriques
+## Engines
 
-Total Return / CAGR / Sharpe / Max Drawdown / Volatilité annualisée / Calmar — comparées au benchmark (SPY par défaut).
+| | Python `strategies/` | C++ `core/` |
+|---|---|---|
+| Dispatch | `queue.Queue` + `if/elif` | `std::queue` + `std::visit` |
+| Events | dataclasses | `std::variant` |
+| Data | yfinance live | pre-downloaded CSV |
+| Output | inline Streamlit | `results/*.csv` |
+| Use case | rapid prototyping | long-period backtest |
+
+## Metrics
+
+Total Return / CAGR / Sharpe Ratio / Max Drawdown / Annualised Volatility / Calmar Ratio — all compared against a configurable benchmark (default: SPY).
