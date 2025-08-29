@@ -46,10 +46,10 @@
         buildInputs = [pythonEnv];
         installPhase = ''
           mkdir -p $out/bin $out/lib
-          cp backtest.py $out/lib/backtest.py
+          cp -r . $out/lib/
           cat > $out/bin/backtest << EOF
           #!/bin/sh
-          exec ${pythonEnv}/bin/python $out/lib/backtest.py "\$@"
+          exec ${pythonEnv}/bin/streamlit run $out/lib/app.py "\$@"
           EOF
           chmod +x $out/bin/backtest
         '';
