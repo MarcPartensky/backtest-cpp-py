@@ -24,6 +24,7 @@
           yfinance
           # dev
           ruff
+          streamlit
         ]);
     in {
       devShells.default = pkgs.mkShell {
