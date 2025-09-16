@@ -50,7 +50,10 @@
           cp -r . $out/lib/
           cat > $out/bin/backtest << EOF
           #!/bin/sh
-          exec ${pythonEnv}/bin/streamlit run $out/lib/app.py "\$@"
+          exec ${pythonEnv}/bin/streamlit run $out/lib/app.py \
+            --browser.gatherUsageStats=false \
+            --server.headless=true \
+            "\$@"
           EOF
           chmod +x $out/bin/backtest
         '';
