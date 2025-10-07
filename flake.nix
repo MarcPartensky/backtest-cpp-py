@@ -53,6 +53,7 @@
           exec ${pythonEnv}/bin/streamlit run $out/lib/app.py \
             --browser.gatherUsageStats=false \
             --server.headless=true \
+            --server.fileWatcherType=none \
             "\$@"
           EOF
           chmod +x $out/bin/backtest
