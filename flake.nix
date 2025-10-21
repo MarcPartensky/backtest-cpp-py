@@ -25,6 +25,7 @@
           # dev
           ruff
           streamlit
+          plotly
         ]);
     in {
       devShells.default = pkgs.mkShell {
