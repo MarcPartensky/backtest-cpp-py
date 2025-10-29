@@ -40,25 +40,28 @@
           echo "backtest dev shell — python $(python --version)"
         '';
       };
-
       packages.default = pkgs.stdenv.mkDerivation {
-        pname = "backtest";
-        version = "0.1.0";
-        src = ./.;
-        buildInputs = [pythonEnv];
-        installPhase = ''
-          mkdir -p $out/bin $out/lib
-          cp -r . $out/lib/
-          cat > $out/bin/backtest << EOF
-          #!/bin/sh
-          exec ${pythonEnv}/bin/streamlit run $out/lib/app.py \
-            --browser.gatherUsageStats=false \
-            --server.headless=true \
-            --server.fileWatcherType=none \
-            "\$@"
-          EOF
-          chmod +x $out/bin/backtest
-        '';
-      };
+  pname = "backtest";
+  version = "0.1.0";
+  src = ./.;
+  nativeBuildInputs = [ pkgs.makeWrapper ];
+  buildInputs = [ pythonEnv ];
+  installPhase = ''
+    mkdir -p $out/bin $out/lib
+    cp -r . $out/lib/
+    cat > $out/bin/backtest << EOF
+    #!/bin/sh
+    cd $out/lib
+    exec ${pythonEnv}/bin/streamlit run $out/lib/app.py \
+      --browser.gatherUsageStats=false \
+      --server.fileWatcherType=none \
+      "\$@"
+    EOF
+    chmod +x $out/bin/backtest
+    wrapProgram $out/bin/backtest \
+      --prefix PATH : ${pythonEnv}/bin
+  '';
+};
+
     });
 }
