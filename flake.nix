@@ -51,6 +51,7 @@
     cp -r . $out/lib/
     cat > $out/bin/backtest << EOF
     #!/bin/sh
+    export PATH="${pythonEnv}/bin:\$PATH"
     cd $out/lib
     exec ${pythonEnv}/bin/streamlit run $out/lib/app.py \
       --browser.gatherUsageStats=false \
@@ -58,10 +59,6 @@
       "\$@"
     EOF
     chmod +x $out/bin/backtest
-    wrapProgram $out/bin/backtest \
-      --prefix PATH : ${pythonEnv}/bin
   '';
-};
-
     });
 }
