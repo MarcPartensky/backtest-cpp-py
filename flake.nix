@@ -60,5 +60,6 @@
     EOF
     chmod +x $out/bin/backtest
   '';
+  };
     });
 }
