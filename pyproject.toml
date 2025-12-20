@@ -12,3 +12,9 @@ dependencies = [
     "streamlit>=1.56.0",
     "yfinance>=1.2.1",
 ]
+
+[tool.uv.extra-build-dependencies]
+multitasking = ["setuptools"]
+
+[tool.setuptools]
+packages = []
