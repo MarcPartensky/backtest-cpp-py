@@ -41,32 +41,6 @@
         pname = "backtest";
         version = "0.1.0";
         src = ./.;
-        installPhase = ''
-          mkdir -p $out/bin $out/lib
-          cp -r . $out/lib/
-          cat > $out/bin/backtest << EOF
-          #!/bin/sh
-          export PATH="${venv}/bin:\$PATH"
-          cd $out/lib
-          exec ${venv}/bin/streamlit run $out/lib/app.py \
-            --browser.gatherUsageStats=false \
-            --server.fileWatcherType=none \
-            "\$@"
-          EOF
-          chmod +x $out/bin/backtest
-        '';
-      };
-
-      devShells.default = pkgs.mkShell {
-        packages = [pkgs.uv pkgs.just pkgs.ruff venv];
-        shellHook = ''
-          echo "backtest dev shell"
-        '';
-      };
-      packages.default = pkgs.stdenv.mkDerivation {
-        pname = "backtest";
-        version = "0.1.0";
-        src = ./.;
         
         nativeBuildInputs = [ pkgs.cmake pkgs.gcc ];
         buildInputs = [ venv ];
