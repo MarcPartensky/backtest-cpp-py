@@ -46,8 +46,8 @@
         buildInputs = [ venv ];
       
         buildPhase = ''
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -j$NIX_BUILD_CORES
+            cmake -B build -DCMAKE_BUILD_TYPE=Release
+            cmake --build build -j4
         '';
       
         installPhase = ''
