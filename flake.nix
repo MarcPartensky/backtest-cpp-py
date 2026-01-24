@@ -41,6 +41,8 @@
         pname = "backtest";
         version = "0.1.0";
         src = ./.;
+        dontConfigure = true;
+
         
         nativeBuildInputs = [ pkgs.cmake pkgs.gcc ];
         buildInputs = [ venv ];
