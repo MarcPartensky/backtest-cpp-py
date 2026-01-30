@@ -272,7 +272,7 @@ st.markdown("---")
 # ── Download ──────────────────────────────────────────────────────────────────
 
 if download_btn:
-    cmd = ["python", "scripts/download_data.py"] + symbols + [
+    cmd = [sys.executable, "scripts/download_data.py"] + symbols + [
            "--start", str(start), "--end", str(end), "--outdir", DATA_DIR]
     with st.status("Downloading data...", expanded=True) as status:
         proc = subprocess.run(cmd, capture_output=True, text=True)
@@ -280,7 +280,7 @@ if download_btn:
         status.update(
             label="Download complete." if proc.returncode == 0 else "Download failed.",
             state="complete" if proc.returncode == 0 else "error")
-    st.stop()
+
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -294,7 +294,6 @@ if build_btn:
         ok = cfg.returncode == 0 and bld.returncode == 0
         status.update(label="Build complete." if ok else "Build failed.",
                       state="complete" if ok else "error")
-    st.stop()
 
 # ── Idle ──────────────────────────────────────────────────────────────────────
 
