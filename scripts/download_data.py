@@ -12,6 +12,12 @@ import os
 import yfinance as yf
 import pandas as pd
 
+DATA_DIR = os.path.join(
+    os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
+    "backtest",
+    "data",
+)
+
 
 def download(symbols: list[str], start: str, end: str, out_dir: str = "data"):
     os.makedirs(out_dir, exist_ok=True)
@@ -26,15 +32,17 @@ def download(symbols: list[str], start: str, end: str, out_dir: str = "data"):
             df = raw[["Open", "High", "Low", "Close", "Volume"]].copy()
         else:
             # multi-symbol: yfinance returns MultiIndex columns (field, symbol)
-            df = raw.xs(sym, axis=1, level=1)[["Open", "High", "Low", "Close", "Volume"]].copy()
+            df = raw.xs(sym, axis=1, level=1)[
+                ["Open", "High", "Low", "Close", "Volume"]
+            ].copy()
 
         if df.empty:
             print(f"  WARNING: no data for {sym}")
             continue
 
         df.index.name = "date"
-        df.columns    = ["open", "high", "low", "close", "volume"]
-        df["volume"]  = df["volume"].astype(int)
+        df.columns = ["open", "high", "low", "close", "volume"]
+        df["volume"] = df["volume"].astype(int)
 
         path = os.path.join(out_dir, f"{sym}.csv")
         df.to_csv(path)
@@ -44,9 +52,9 @@ def download(symbols: list[str], start: str, end: str, out_dir: str = "data"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("symbols", nargs="+")
-    parser.add_argument("--start",  default="2015-01-01")
-    parser.add_argument("--end",    default="2024-01-01")
-    parser.add_argument("--outdir", default="data")
+    parser.add_argument("--start", default="2015-01-01")
+    parser.add_argument("--end", default="2024-01-01")
+    parser.add_argument("--outdir", default=DATA_DIR)
     args = parser.parse_args()
 
     # handle both "AAPL MSFT" and "AAPL,MSFT"
