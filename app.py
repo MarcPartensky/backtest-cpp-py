@@ -63,8 +63,12 @@ GRID = "#21262D"
 GREEN = "#2ECC71"
 
 CORE_BINARY = "./build/backtest"
-DATA_DIR = "data"
 RESULTS_DIR = "results"
+DATA_DIR = os.path.join(
+    os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
+    "backtest",
+    "data",
+)
 
 
 def _base_layout(**kw) -> dict:
