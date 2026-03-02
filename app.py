@@ -62,13 +62,21 @@ GRAY = "#8B949E"
 GRID = "#21262D"
 GREEN = "#2ECC71"
 
-CORE_BINARY = "./build/backtest"
-RESULTS_DIR = "results"
-DATA_DIR = os.path.join(
+_STORE_LIB  = os.path.dirname(os.path.abspath(__file__))
+_WORK_DIR   = os.path.join(
     os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
-    "backtest",
-    "data",
+    "backtest"
 )
+
+CORE_BINARY = os.path.join(_STORE_LIB, "..", "..", "bin", "backtest-cpp")
+DATA_DIR    = os.path.join(_WORK_DIR, "data")
+RESULTS_DIR = os.path.join(_WORK_DIR, "results")
+
+print(f"DEBUG STORE_LIB={_STORE_LIB}", file=sys.stderr)
+print(f"DEBUG WORK_DIR={_WORK_DIR}", file=sys.stderr)
+print(f"DEBUG DATA_DIR={DATA_DIR}", file=sys.stderr)
+print(f"DEBUG RESULTS_DIR={RESULTS_DIR}", file=sys.stderr)
+print(f"DEBUG CORE_BINARY={CORE_BINARY}", file=sys.stderr)
 
 
 def _base_layout(**kw) -> dict:
