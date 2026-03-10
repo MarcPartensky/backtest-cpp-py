@@ -16,6 +16,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import yfinance as yf
+import yaml
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
@@ -62,22 +63,43 @@ GRAY = "#8B949E"
 GRID = "#21262D"
 GREEN = "#2ECC71"
 
+
 _STORE_LIB  = os.path.dirname(os.path.abspath(__file__))
+CORE_BINARY = os.path.normpath(os.path.join(_STORE_LIB, "..", "..", "bin", "backtest-cpp"))
+
 _WORK_DIR   = os.path.join(
     os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
     "backtest"
 )
+_CONFIG_DIR = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+    "backtest"
+)
+CONFIG_FILE = os.path.join(_CONFIG_DIR, "config.yml")
 
-CORE_BINARY = os.path.join(_STORE_LIB, "..", "..", "bin", "backtest-cpp")
-DATA_DIR    = os.path.join(_WORK_DIR, "data")
-RESULTS_DIR = os.path.join(_WORK_DIR, "results")
+def load_config():
+    os.makedirs(_CONFIG_DIR, exist_ok=True)
+    os.makedirs(os.path.join(_WORK_DIR, "data"), exist_ok=True)
+    os.makedirs(os.path.join(_WORK_DIR, "results"), exist_ok=True)
+    if not os.path.exists(CONFIG_FILE):
+        cfg = {
+            "data_dir":    os.path.join(_WORK_DIR, "data"),
+            "results_dir": os.path.join(_WORK_DIR, "results"),
+        }
+        with open(CONFIG_FILE, "w") as f:
+            yaml.dump(cfg, f)
+    with open(CONFIG_FILE) as f:
+        return yaml.safe_load(f)
 
-print(f"DEBUG STORE_LIB={_STORE_LIB}", file=sys.stderr)
-print(f"DEBUG WORK_DIR={_WORK_DIR}", file=sys.stderr)
-print(f"DEBUG DATA_DIR={DATA_DIR}", file=sys.stderr)
-print(f"DEBUG RESULTS_DIR={RESULTS_DIR}", file=sys.stderr)
+config      = load_config()
+DATA_DIR    = config["data_dir"]
+RESULTS_DIR = config["results_dir"]
+
+print(f"DEBUG STORE_LIB={_STORE_LIB}",   file=sys.stderr)
 print(f"DEBUG CORE_BINARY={CORE_BINARY}", file=sys.stderr)
-
+print(f"DEBUG DATA_DIR={DATA_DIR}",       file=sys.stderr)
+print(f"DEBUG RESULTS_DIR={RESULTS_DIR}", file=sys.stderr)
+print(f"DEBUG CONFIG_FILE={CONFIG_FILE}", file=sys.stderr)
 
 def _base_layout(**kw) -> dict:
     return dict(
