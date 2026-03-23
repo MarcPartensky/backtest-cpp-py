@@ -64,8 +64,7 @@ GRID = "#21262D"
 GREEN = "#2ECC71"
 
 
-_STORE_LIB  = os.path.dirname(os.path.abspath(__file__))
-CORE_BINARY = os.path.normpath(os.path.join(_STORE_LIB, "..", "..", "bin", "backtest-cpp"))
+CORE_BINARY = os.path.normpath(os.path.join("..", "bin", "backtest"))
 
 _WORK_DIR   = os.path.join(
     os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
@@ -95,7 +94,6 @@ config      = load_config()
 DATA_DIR    = config["data_dir"]
 RESULTS_DIR = config["results_dir"]
 
-print(f"DEBUG STORE_LIB={_STORE_LIB}",   file=sys.stderr)
 print(f"DEBUG CORE_BINARY={CORE_BINARY}", file=sys.stderr)
 print(f"DEBUG DATA_DIR={DATA_DIR}",       file=sys.stderr)
 print(f"DEBUG RESULTS_DIR={RESULTS_DIR}", file=sys.stderr)
