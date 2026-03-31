@@ -11,7 +11,6 @@
     pyproject-build-systems.inputs.pyproject-nix.follows = "pyproject-nix";
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
   };
-
   outputs = {
     self,
     nixpkgs,
@@ -24,17 +23,14 @@
       pkgs = nixpkgs.legacyPackages.${system};
       lib = nixpkgs.lib;
       python = pkgs.python312;
-
       workspace = uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;};
       overlay = workspace.mkPyprojectOverlay {sourcePreference = "wheel";};
-
       pythonSet = (pkgs.callPackage pyproject-nix.build.packages {inherit python;}).overrideScope (
         lib.composeManyExtensions [
           pyproject-build-systems.overlays.default
           overlay
         ]
       );
-
       venv = pythonSet.mkVirtualEnv "backtest-env" workspace.deps.default;
     in {
       packages.default = pkgs.stdenv.mkDerivation {
@@ -42,20 +38,16 @@
         version = "0.1.0";
         src = ./.;
         dontConfigure = true;
-
-        
-        nativeBuildInputs = [ pkgs.cmake pkgs.gcc ];
-        buildInputs = [ venv ];
-      
+        nativeBuildInputs = [pkgs.cmake pkgs.gcc];
+        buildInputs = [venv pkgs.yaml-cpp];
         buildPhase = ''
-            cmake -B build -DCMAKE_BUILD_TYPE=Release
-            cmake --build build -j4
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j4
         '';
-      
         installPhase = ''
           mkdir -p $out/bin $out/lib
           cp -r . $out/lib/
-          cp build/backtest $out/bin/backtest-cpp   # le binaire C++
+          cp build/backtest $out/bin/backtest-cpp
           cat > $out/bin/backtest << EOF
           #!/bin/sh
           export PATH="${venv}/bin:\$PATH"

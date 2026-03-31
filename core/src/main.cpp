@@ -20,6 +20,8 @@
 #include <queue>
 #include <sstream>
 #include <filesystem>
+#include <cstdlib>
+#include <yaml-cpp/yaml.h>
 
 #include "events.hpp"
 #include "data_handler.hpp"
@@ -40,16 +42,31 @@ static std::vector<std::string> split(const std::string& s, char delim) {
     return out;
 }
 
+static std::string config_path() {
+    const char* xdg = std::getenv("XDG_CONFIG_HOME");
+    std::string base = xdg ? xdg : (std::string(std::getenv("HOME")) + "/.config");
+    return base + "/backtest/config.yml";
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 int main(int argc, char* argv[]) {
     // defaults
-    std::string data_dir   = "data";
-    std::string sym_str    = "AAPL";
-    int         fast       = 20;
-    int         slow       = 50;
-    double      capital    = 100'000.0;
+    std::string data_dir    = "data";
+    std::string results_dir = "results";
+    std::string sym_str     = "AAPL";
+    int         fast        = 20;
+    int         slow        = 50;
+    double      capital     = 100'000.0;
 
+    // ── Load config ───────────────────────────────────────────────────────────
+    try {
+        YAML::Node cfg = YAML::LoadFile(config_path());
+        if (cfg["data_dir"])    data_dir    = cfg["data_dir"].as<std::string>();
+        if (cfg["results_dir"]) results_dir = cfg["results_dir"].as<std::string>();
+    } catch (...) {}
+
+    // CLI overrides
     if (argc > 1) data_dir = argv[1];
     if (argc > 2) sym_str  = argv[2];
     if (argc > 3) fast     = std::stoi(argv[3]);
@@ -104,14 +121,12 @@ int main(int argc, char* argv[]) {
     auto        report = compute_performance(eq, capital);
     print_report(report);
 
-    // Export for Python visualizer
-    std::filesystem::create_directories("results");
-    export_equity_csv(eq,                     "results/equity.csv");
-    export_trades_csv(strategy.trade_log(),   "results/trades.csv");
-    export_perf_csv  (report,                 "results/performance.csv");
+    std::filesystem::create_directories(results_dir);
+    export_equity_csv(eq,                   results_dir + "/equity.csv");
+    export_trades_csv(strategy.trade_log(), results_dir + "/trades.csv");
+    export_perf_csv  (report,               results_dir + "/performance.csv");
 
-    std::printf("\nResults exported to results/\n");
-    std::printf("Run:  python visualize.py\n");
+    std::printf("\nResults exported to %s/\n", results_dir.c_str());
 
     return 0;
 }
