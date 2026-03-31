@@ -64,7 +64,7 @@ GRID = "#21262D"
 GREEN = "#2ECC71"
 
 
-CORE_BINARY = os.path.normpath(os.path.join("..", "bin", "backtest"))
+CORE_BINARY = os.path.normpath(os.path.join("build", "backtest"))
 
 _WORK_DIR   = os.path.join(
     os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
