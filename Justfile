@@ -1,18 +1,30 @@
-run:
-    uv run streamlit run backtest.py
+# Event-Driven Backtesting Engine
+# Usage: just <command>
 
-help:
-    just --list
+# Download OHLCV data
+download sym="AAPL,MSFT" start="2015-01-01" end="2024-01-01":
+    uv run python scripts/download_data.py {{sym}} --start {{start}} --end {{end}}
 
-install:
-    uv sync
+# Compile C++ core
+build:
+    cmake -B build -DCMAKE_BUILD_TYPE=Release
+    cmake --build build -j4
 
-lint:
-    uv run ruff check backtest.py
+# Run C++ core directly (CLI)
+run-cpp sym="AAPL,MSFT" fast="20" slow="50" capital="100000":
+    ./build/backtest data {{sym}} {{fast}} {{slow}} {{capital}}
 
-fmt:
-    uv run ruff format backtest.py
+# Launch Streamlit (choose engine in sidebar)
+app:
+    uv run streamlit run app.py
 
+# Full workflow: download → build → run C++ → launch UI
+all sym="AAPL,MSFT":
+    just download {{sym}}
+    just build
+    just run-cpp {{sym}}
+    just app
+
+# Clean build artifacts
 clean:
-    rm -f backtest_results.png
-    find . -name "__pycache__" -exec rm -rf {} +
+    rm -rf build/ results/
