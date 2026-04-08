@@ -558,17 +558,17 @@ else:
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Equity Curve", "📉 Drawdown", "📊 Returns", "📋 Trades"])
 
     with tab1:
-        st.plotly_chart(plot_equity(equity, bench_equity, trade_log), use_container_width=True)
+        st.plotly_chart(plot_equity(equity, bench_equity, trade_log), width='stretch')
 
     with tab2:
         c1, c2 = st.columns([3, 2])
         with c1:
-            st.plotly_chart(plot_drawdown(perf["drawdown"]), use_container_width=True)
+            st.plotly_chart(plot_drawdown(perf["drawdown"]), width='stretch')
         with c2:
-            st.plotly_chart(plot_rolling_sharpe(perf["returns"]), use_container_width=True)
+            st.plotly_chart(plot_rolling_sharpe(perf["returns"]), width='stretch')
 
     with tab3:
-        st.plotly_chart(plot_returns_dist(perf["returns"]), use_container_width=True)
+        st.plotly_chart(plot_returns_dist(perf["returns"]), width='stretch')
 
     with tab4:
         if trade_log:
@@ -577,7 +577,7 @@ else:
             df_log.columns = ["Date", "Symbol", "Signal"]
             st.dataframe(
                 df_log.sort_values("Date", ascending=False),
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
             )
             st.caption(f"Total trades: {len(df_log)} - BUY: {(df_log['Signal']=='BUY').sum()} / SELL: {(df_log['Signal']=='SELL').sum()}")
