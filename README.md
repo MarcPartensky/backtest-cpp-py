@@ -1,85 +1,64 @@
-# Event-Driven Backtesting Engine
+# backtest
+Event-driven backtesting engine built from scratch. Simulates realistic order execution with a clean separation between data, signal generation, portfolio management, and trade execution.
 
-Moteur de backtesting event-driven implémenté en deux langages avec une interface Streamlit unifiée.
-
+## Architecture
 ```
-DataHandler  →  MarketEvent
-Strategy     →  SignalEvent
-Portfolio    →  OrderEvent
-Broker       →  FillEvent  →  Portfolio::update()
+DataHandler  ──► MarketEvent
+Strategy     ──► SignalEvent
+Portfolio    ──► OrderEvent
+Broker       ──► FillEvent ──► Portfolio.update()
 ```
+Each component communicates only through a shared event queue — the same pattern used in production trading systems.
 
-## Structure
+## Features
+- **Event-driven loop** — no look-ahead bias, bars are streamed one at a time
+- **yfinance integration** — pulls any ticker available on Yahoo Finance
+- **SMA crossover strategy** — fast/slow moving average with configurable windows
+- **Fixed fractional sizing** — invests a fixed fraction of available capital per trade
+- **Simulated broker** — fills at next bar open + flat commission model (0.1%)
+- **Performance metrics** — Total return, CAGR, Sharpe ratio, Max drawdown, Annualised volatility
+- **Result plot** — equity curve vs benchmark, daily returns bar chart, drawdown chart
 
-```
-backtest/
-├── core/                   ← moteur C++17 (performance-critical)
-│   ├── include/
-│   │   ├── events.hpp      # std::variant<MarketEvent, SignalEvent, OrderEvent, FillEvent>
-│   │   ├── bar.hpp         # struct OHLCV
-│   │   ├── data_handler.hpp
-│   │   ├── strategy.hpp    # base Strategy + SMACrossStrategy
-│   │   ├── portfolio.hpp
-│   │   ├── broker.hpp      # fill au open, commission 0.1%
-│   │   ├── performance.hpp # Sharpe, CAGR, Max DD, Calmar
-│   │   └── export.hpp      # export CSV
-│   └── src/
-│       └── main.cpp
-│
-├── strategies/             ← moteur Python (reference implementation)
-│   ├── events.py
-│   ├── data_handler.py
-│   ├── strategy.py
-│   ├── portfolio.py
-│   ├── broker.py
-│   ├── performance.py
-│   └── runner.py
-│
-├── app.py                  ← Streamlit, point d'entrée unique
-├── scripts/
-│   └── download_data.py
-├── CMakeLists.txt
-├── Justfile
-└── pyproject.toml
-```
-
-## Quickstart
-
-### 1. Télécharger les données
+## Usage
 ```bash
-just download AAPL,MSFT
-# ou: python scripts/download_data.py AAPL MSFT --start 2015-01-01 --end 2024-01-01
+pip install -r requirements.txt
+python backtest.py
+```
+Or import and configure programmatically:
+```python
+from backtest import run_backtest
+equity, report = run_backtest(
+    symbols=["AAPL", "NVDA", "MSFT"],
+    start="2018-01-01",
+    end="2024-01-01",
+    fast_window=10,
+    slow_window=30,
+    initial_capital=50_000,
+    benchmark="SPY",
+)
 ```
 
-### 2. Compiler le core C++
-```bash
-just build
-# ou: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4
+## Extending
+To add a new strategy, subclass `Strategy` and implement `calculate_signals`:
+```python
+class MyStrategy(Strategy):
+    def calculate_signals(self, event: Event) -> None:
+        if event.type != EventType.MARKET:
+            return
+        # analyse bars, emit SignalEvent(symbol, Direction.LONG / EXIT)
 ```
 
-### 3. Lancer l'interface
-```bash
-just app
-# ou: streamlit run app.py
+## Output
+```
+── Performance ──────────────────────────
+  Total return         +87.43%
+  CAGR                 +9.12%
+  Sharpe ratio         0.74
+  Max drawdown         -23.18%
+  Volatility ann.      14.32%
+─────────────────────────────────────────
 ```
 
-Choisir le moteur dans la sidebar : **Python strategies** (inline) ou **C++ core** (subprocess + CSV).
+![Backtest results](backtest_results.png)
 
-### Workflow complet en une commande
-```bash
-just all AAPL,MSFT
-```
-
-## Engines
-
-| | Python `strategies/` | C++ `core/` |
-|---|---|---|
-| Dispatch | `queue.Queue` + `if/elif` | `std::queue` + `std::visit` |
-| Events | dataclasses | `std::variant` |
-| Data | yfinance live | CSV pre-downloaded |
-| Output | inline Streamlit | `results/*.csv` |
-| Usage | prototypage rapide | backtest longue période |
-
-## Métriques
-
-Total Return / CAGR / Sharpe / Max Drawdown / Volatilité annualisée / Calmar — comparées au benchmark (SPY par défaut).
+Three panels: equity curve vs benchmark, daily returns, drawdown.
