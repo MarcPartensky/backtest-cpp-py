@@ -1,6 +1,8 @@
 # backtest
 Event-driven backtesting engine built from scratch. Simulates realistic order execution with a clean separation between data, signal generation, portfolio management, and trade execution.
 
+![Backtest results](screenshot.png)
+
 ## Architecture
 ```
 DataHandler  ──► MarketEvent
@@ -59,6 +61,5 @@ class MyStrategy(Strategy):
 ─────────────────────────────────────────
 ```
 
-![Backtest results](backtest_results.png)
 
 Three panels: equity curve vs benchmark, daily returns, drawdown.
