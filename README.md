@@ -93,11 +93,3 @@ Ouvre `http://localhost:8501`. Les dossiers `data/` et `results/` sont montés e
 ## Métriques
 
 Total Return / CAGR / Sharpe / Max Drawdown / Volatilité annualisée / Calmar — comparées au benchmark (SPY par défaut).
-
-## Docker
-
-```bash
-docker compose up --build
-```
-
-Ouvre `http://localhost:8501`. Les dossiers `data/` et `results/` sont montés en volume local — les données et résultats persistent entre les redémarrages.
