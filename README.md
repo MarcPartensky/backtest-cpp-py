@@ -45,7 +45,7 @@ backtest/
 └── pyproject.toml
 ```
 
-## Quickstart
+## Option 1 : Run on host directly
 
 ### 1. Download data
 ```bash
@@ -59,7 +59,7 @@ just build
 # or: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4
 ```
 
-### 3. Launch the UI
+### 3. Launch the UI (you could just run this and skip step 1 and 2)
 ```bash
 just app
 # or: streamlit run app.py
@@ -72,7 +72,7 @@ Select the engine in the sidebar: **Python strategies** (runs inline) or **C++ c
 just all AAPL,MSFT
 ```
 
-## Docker
+## Option 2 : Use Docker
 
 ```bash
 docker compose up --build
